@@ -5,7 +5,6 @@ import (
 	"context"
 	"net/http"
 
-	"github.com/qcbit/blockchain/foundation/web"
 	"go.uber.org/zap"
 )
 
@@ -22,5 +21,5 @@ func (h *Handlers) Sample(ctx context.Context, w http.ResponseWriter, r *http.Re
 		Status: "ok",
 	}
 
-	return web.Respond(ctx, w, resp, http.StatusOK)
+	// return web.Respond(ctx, w, resp, http.StatusOK)
 }
