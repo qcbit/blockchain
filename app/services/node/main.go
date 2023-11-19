@@ -44,7 +44,7 @@ func run(log *zap.SugaredLogger) error {
 			ReadTimeout     string `conf:"default:5s"`
 			WriteTimeout    string `conf:"default:10s"`
 			IdleTimeout     string `conf:"default:120s"`
-			ShutdownTimeout string `conf:"default:20s"`
+			ShutdownTimeout string `conf:"default:20s,mask"`
 			APIHost         string `conf:"default:0.0.0.0:8080"`
 			DebugHost       string `conf:"default:0.0.0.0:9080"`
 		}
