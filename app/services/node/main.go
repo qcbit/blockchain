@@ -4,12 +4,14 @@ import (
 	"errors"
 	"expvar"
 	"fmt"
+	"net/http"
 	"os"
 	"os/signal"
 	"runtime"
 	"syscall"
 
 	"github.com/ardanlabs/conf/v3"
+	"github.com/qcbit/blockchain/business/web/v1/debug"
 	"github.com/qcbit/blockchain/foundation/logger"
 	"go.uber.org/zap"
 )
@@ -79,6 +81,18 @@ func run(log *zap.SugaredLogger) error {
 	log.Infow("startup", "config", out)
 
 	expvar.NewString("build").Set(build)
+
+	// ----------------------------------------------------------------
+	// Debug 
+	// ----------------------------------------------------------------
+	log.Infow("startup", "status", "debug v1 router started", "host", cfg.Web.DebugHost)
+
+	go func() {
+		if err := http.ListenAndServe(cfg.Web.DebugHost, debug.StandardLibraryMux()); err != nil {
+			log.Errorw("shutdown", "status", "debug v1 router closed", "host", cfg.Web.DebugHost, "ERROR", err)
+		}
+	}()
+
 
 	shutdown := make(chan os.Signal, 1)
 	signal.Notify(shutdown, syscall.SIGINT, syscall.SIGTERM)
