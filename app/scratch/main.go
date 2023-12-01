@@ -8,8 +8,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"math/big"
 	"os"
 
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/crypto"
 )
 
@@ -54,7 +56,7 @@ func run() error {
 		return fmt.Errorf("failed to sign tx: %w", err)
 	}
 
-	fmt.Println("Signature:", hex.EncodeToString(sig))
+	fmt.Println("Signature:", hexutil.Encode(sig))
 
 	publicKey, err := crypto.SigToPub(v, sig)
 	if err != nil {
@@ -62,6 +64,12 @@ func run() error {
 	}
 
 	fmt.Println("Public address:", crypto.PubkeyToAddress(*publicKey).Hex())
+
+	vv, r, s, err := ToVRSFromHexSignature(hexutil.Encode(sig))
+	if err != nil {
+		return fmt.Errorf("failed to convert signature: %w", err)
+	}
+	fmt.Println("V:", vv, "R:", r, "S:", s)
 
 	return nil
 }
@@ -74,4 +82,17 @@ func GenerateKey() (*ecdsa.PrivateKey, error) {
 	}
 
 	return privateKey, nil
+}
+
+// ToVRSFromHexSignature converts a hex-encoded signature to the V, R, S components.
+func ToVRSFromHexSignature(sig string) (v, r, s *big.Int, err error) {
+	sigBytes, err := hex.DecodeString(sig[2:])
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	return new(big.Int).SetBytes(sigBytes[:32]),
+		   new(big.Int).SetBytes(sigBytes[32:64]),
+		   new(big.Int).SetBytes([]byte{sigBytes[64]}),
+		   nil
 }
