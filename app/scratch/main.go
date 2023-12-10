@@ -13,6 +13,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/qcbit/blockchain/foundation/blockchain/database"
 )
 
 type Tx struct {
@@ -71,6 +72,25 @@ func run() error {
 	}
 	fmt.Println("V:", vv, "R:", r, "S:", s)
 
+	// ----------------------------------------------------------------------------
+
+	fmt.Println("============== TX ==============")
+
+	testTx, err := database.NewTx(1,
+		"0xF01813E4B85e178A83e29B8E7bF26BD830a25f32",
+		"0x6Fe6CF3c8fF57c58d24BfC869668F48BCbDb3BD9",
+		100, 0, 0, nil)
+	if err != nil {
+		return fmt.Errorf("failed to create tx: %w", err)
+	}
+
+	signedTx, err := testTx.Sign(privateKey)
+	if err != nil {
+		return fmt.Errorf("failed to sign tx: %w", err)
+	}
+
+	fmt.Println("Signed tx:", signedTx)
+
 	return nil
 }
 
@@ -91,8 +111,9 @@ func ToVRSFromHexSignature(sig string) (v, r, s *big.Int, err error) {
 		return nil, nil, nil, err
 	}
 
-	return new(big.Int).SetBytes(sigBytes[:32]),
-		   new(big.Int).SetBytes(sigBytes[32:64]),
-		   new(big.Int).SetBytes([]byte{sigBytes[64]}),
-		   nil
+	r = new(big.Int).SetBytes(sigBytes[:32])
+	s = new(big.Int).SetBytes(sigBytes[32:64])
+	v = new(big.Int).SetBytes([]byte{sigBytes[64]})
+
+	return v, r, s, nil
 }
