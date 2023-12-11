@@ -1,10 +1,13 @@
 package database
 
 import (
+	"bytes"
 	"crypto/ecdsa"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"math/big"
+	"time"
 
 	"github.com/qcbit/blockchain/foundation/blockchain/signature"
 )
@@ -109,4 +112,39 @@ func (tx SignedTx) SignatureString() string {
 // String implements the Stringer interface.
 func (tx SignedTx) String() string {
 	return fmt.Sprintf("%s: %d", tx.FromID, tx.Nonce)
+}
+
+// ----------------------------------------------------------------------------
+
+// BlockTx represents a transaction in a block, which includes the timestamp and gas fees.
+type BlockTx struct {
+	SignedTx
+	Timestamp uint64 `json:"timestamp"` // Ethereum: The timestamp of the block.
+	GasPrice  uint64 `json:"gas_price"` // Ethereum: The gas price in the block.
+	GasUnits  uint64 `json:"gas_units"` // Ethereum: The gas units in the block.
+}
+
+// NewBlockTx creates a new block transaction.
+func NewBlockTx(tx SignedTx, gasPrice, gasUnits uint64) BlockTx {
+	return BlockTx{
+		SignedTx:  tx,
+		Timestamp: uint64(time.Now().UTC().UnixMilli()),
+		GasPrice:  gasPrice,
+		GasUnits:  gasUnits,
+	}
+}
+
+// Hash implements the merkle Hashable interface to hash a block transaction.
+func (tx BlockTx) Hash() ([]byte, error) {
+	str := signature.Hash(tx)
+	// Remove the 0x prefix.
+	return hex.DecodeString(str[2:])
+}
+
+// Equals implements the merkle Hashable interface to compare two block transactions.
+// If the nonce and signatures are the same, the two blocks are the same.
+func (tx BlockTx) Equals(otherTx BlockTx) bool {
+	txSig := signature.ToSignatureBytes(tx.V, tx.R, tx.S)
+	otherTxSig := signature.ToSignatureBytes(otherTx.V, otherTx.R, otherTx.S)
+	return tx.Nonce == otherTx.Nonce && bytes.Equal(txSig, otherTxSig)
 }

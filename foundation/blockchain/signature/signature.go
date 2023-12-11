@@ -2,6 +2,7 @@
 package signature
 
 import (
+	"crypto/sha256"
 	"crypto/ecdsa"
 	"encoding/json"
 	"errors"
@@ -12,8 +13,22 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 )
 
+// ZeroHash is the hash of an empty string.
+const ZeroHash = "0x0000000000000000000000000000000000000000000000000000000000000000"
+
 // QID is an arbitrary value added to the v component of the signature similar to Ethereum and Bitcoin.
 const QID = 29
+
+// Hash returns a unique hash for the data.
+func Hash(value any) string {
+	data, err := json.Marshal(value)
+	if err != nil {
+		return ZeroHash
+	}
+
+	hash := sha256.Sum256(data)
+	return hexutil.Encode(hash[:])
+}
 
 // Sign uses the specified private key to sign the data.
 func Sign(value any, privateKey *ecdsa.PrivateKey) (v, r, s *big.Int, err error) {
