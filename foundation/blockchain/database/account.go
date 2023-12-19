@@ -5,6 +5,23 @@ import (
 	"unicode"
 )
 
+// Account represents an account on the blockchain.
+type Account struct {
+	AccountID AccountID
+	Nonce     uint64
+	Balance   uint64
+}
+
+// newAccount creates a new account with the given account ID and balance.
+func newAccount(accountID AccountID, balance uint64) Account {
+	return Account {
+		AccountID: accountID,
+		Balance:   balance,
+	}
+}
+
+// ---------------------------------------------------------------------------
+
 // AccountID represents an account ID that is used to sign transactions.
 // It is associated with transactions on the blockchain. This is the last
 // 20 bytes of the hash of the public key.
