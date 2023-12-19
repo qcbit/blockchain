@@ -2,20 +2,20 @@
 package genesis
 
 import (
+	"encoding/json"
 	"os"
 	"time"
-	"encoding/json"
 )
 
 // Genesis is the genesis file.
 type Genesis struct {
-	Date time.Time `json:"date"`
-	ChainID uint16 `json:"chain_id"`
-	TransPerBlock uint16 `json:"trans_per_block"`
-	Difficulty uint16 `json:"difficulty"`
-	MinerReward uint64 `json:"miner_reward"`
-	GasPrice uint64 `json:"gas_price"`
-	Balance map[string]uint64 `json:"balances"`
+	Date          time.Time         `json:"date"`
+	ChainID       uint16            `json:"chain_id"`
+	TransPerBlock uint16            `json:"trans_per_block"`
+	Difficulty    uint16            `json:"difficulty"`
+	MinerReward   uint64            `json:"miner_reward"`
+	GasPrice      uint64            `json:"gas_price"`
+	Balances      map[string]uint64 `json:"balances"`
 }
 
 // Load loads the genesis file.
