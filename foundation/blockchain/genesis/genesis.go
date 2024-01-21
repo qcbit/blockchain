@@ -15,7 +15,7 @@ type Genesis struct {
 	Difficulty    uint16            `json:"difficulty"`
 	MinerReward   uint64            `json:"miner_reward"`
 	GasPrice      uint64            `json:"gas_price"`
-	Balance       map[string]uint64 `json:"balances"`
+	Balances      map[string]uint64 `json:"balances"`
 }
 
 // Load loads the genesis file.

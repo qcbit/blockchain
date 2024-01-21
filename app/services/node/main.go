@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"os"
 	"os/signal"
@@ -11,9 +12,15 @@ import (
 	"time"
 
 	"github.com/ardanlabs/conf/v3"
-	"github.com/qcbit/blockchain/app/services/node/handlers"
-	"github.com/qcbit/blockchain/foundation/logger"
+	"github.com/common-nighthawk/go-figure"
+	"github.com/ethereum/go-ethereum/crypto"
 	"go.uber.org/zap"
+
+	"github.com/qcbit/blockchain/app/services/node/handlers"
+	"github.com/qcbit/blockchain/foundation/blockchain/database"
+	"github.com/qcbit/blockchain/foundation/blockchain/genesis"
+	"github.com/qcbit/blockchain/foundation/blockchain/state"
+	"github.com/qcbit/blockchain/foundation/logger"
 )
 
 // build is the git version of this program. It is set using build flags in the makefile.
@@ -56,10 +63,16 @@ func run(log *zap.SugaredLogger) error {
 			PublicHost      string        `conf:"default:0.0.0.0:8080"`
 			PrivateHost     string        `conf:"default:0.0.0.0:9080"`
 		}
+		State struct {
+			Beneficiary string `conf:"default:miner1"`
+		}
+		NameService struct {
+			Folder string `conf:"default:zblock/accounts/"`
+		}
 	}{
 		Version: conf.Version{
 			Build: build,
-			Desc:  "copyright information here",
+			Desc:  "© 2023 WTFPL",
 		},
 	}
 
@@ -78,12 +91,8 @@ func run(log *zap.SugaredLogger) error {
 	// =========================================================================
 	// App Starting
 
-	fmt.Println(`     _    ____  ____    _    _   _    ____  _     ___   ____ _  ______ _   _    _    ___ _   _  `)
-	fmt.Println(`    / \  |  _ \|  _ \  / \  | \ | |  | __ )| |   / _ \ / ___| |/ / ___| | | |  / \  |_ _| \ | | `)
-	fmt.Println(`   / _ \ | |_) | | | |/ _ \ |  \| |  |  _ \| |  | | | | |   | ' / |   | |_| | / _ \  | ||  \| | `)
-	fmt.Println(`  / ___ \|  _ <| |_| / ___ \| |\  |  | |_) | |__| |_| | |___| . \ |___|  _  |/ ___ \ | || |\  | `)
-	fmt.Println(` /_/   \_\_| \_\____/_/   \_\_| \_|  |____/|_____\___/ \____|_|\_\____|_| |_/_/   \_\___|_| \_| `)
-	fmt.Print("\n")
+	qQhainArt := figure.NewFigure("QChain", "", true)
+	qQhainArt.Print()
 
 	log.Infow("starting service", "version", build)
 	defer log.Infow("shutdown complete")
@@ -94,6 +103,50 @@ func run(log *zap.SugaredLogger) error {
 		return fmt.Errorf("generating config for output: %w", err)
 	}
 	log.Infow("startup", "config", out)
+
+	// ----------------------------------------------------------------
+	// Blockchain Support
+	// ----------------------------------------------------------------
+
+	files, err := ioutil.ReadDir(cfg.NameService.Folder)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	for _, f := range files {
+		log.Infow(f.Name())
+	}
+
+	// Need to load the private key file for the configured beneficiary
+	// so the account can get credited with fees and tips.
+	path := fmt.Sprintf("%s%s.ecdsa", cfg.NameService.Folder, cfg.State.Beneficiary)
+	privateKey, err := crypto.LoadECDSA(path)
+	if err != nil {
+		return fmt.Errorf("unable to load private key for node: %w", err)
+	}
+
+	ev := func(v string, args ...any) {
+		s := fmt.Sprintf(v, args...)
+		log.Infow(s, "traceid", "00000000-0000-0000-0000-000000000000")
+	}
+
+	// Load the genesis file.
+	genesis, err := genesis.Load()
+	if err != nil {
+		return err
+	}
+
+	// The state value represents the blockchain node and manages the blockchain database
+	// and provides the API for the application support.
+	state, err := state.New(state.Config{
+		BeneficiaryID: database.PublicKeyToAccountID(privateKey.PublicKey),
+		Genesis:       genesis,
+		EvHandler:     ev,
+	})
+	if err != nil {
+		return err
+	}
+	defer state.Shutdown()
 
 	// =========================================================================
 	// Start Debug Service
