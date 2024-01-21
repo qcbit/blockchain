@@ -4,6 +4,7 @@ go 1.21
 
 require (
 	github.com/ardanlabs/conf/v3 v3.1.6
+	github.com/common-nighthawk/go-figure v0.0.0-20210622060536-734e95fb86be
 	github.com/dimfeld/httptreemux/v5 v5.5.0
 	github.com/ethereum/go-ethereum v1.12.0
 	github.com/go-playground/locales v0.14.1
