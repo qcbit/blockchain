@@ -119,7 +119,7 @@ func (tx SignedTx) String() string {
 // BlockTx represents a transaction in a block, which includes the timestamp and gas fees.
 type BlockTx struct {
 	SignedTx
-	Timestamp uint64 `json:"timestamp"` // Ethereum: The timestamp of the block.
+	TimeStamp uint64 `json:"timestamp"` // Ethereum: The timestamp of the block.
 	GasPrice  uint64 `json:"gas_price"` // Ethereum: The gas price in the block.
 	GasUnits  uint64 `json:"gas_units"` // Ethereum: The gas units in the block.
 }
@@ -128,7 +128,7 @@ type BlockTx struct {
 func NewBlockTx(tx SignedTx, gasPrice, gasUnits uint64) BlockTx {
 	return BlockTx{
 		SignedTx:  tx,
-		Timestamp: uint64(time.Now().UTC().UnixMilli()),
+		TimeStamp: uint64(time.Now().UTC().UnixMilli()),
 		GasPrice:  gasPrice,
 		GasUnits:  gasUnits,
 	}
