@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"os/signal"
@@ -109,7 +108,7 @@ func run(log *zap.SugaredLogger) error {
 	// Blockchain Support
 	// ----------------------------------------------------------------
 
-	files, err := ioutil.ReadDir(cfg.NameService.Folder)
+	files, err := os.ReadDir(cfg.NameService.Folder)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -190,6 +189,7 @@ func run(log *zap.SugaredLogger) error {
 	publicMux := handlers.PublicMux(handlers.MuxConfig{
 		Shutdown: shutdown,
 		Log:      log,
+		State:    state,
 	})
 
 	// Construct a server to service the requests against the mux.
@@ -217,6 +217,7 @@ func run(log *zap.SugaredLogger) error {
 	privateMux := handlers.PrivateMux(handlers.MuxConfig{
 		Shutdown: shutdown,
 		Log:      log,
+		State:    state,
 	})
 
 	// Construct a server to service the requests against the mux.

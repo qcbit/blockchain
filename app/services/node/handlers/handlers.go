@@ -8,17 +8,20 @@ import (
 	"net/http/pprof"
 	"os"
 
+	"go.uber.org/zap"
+
 	"github.com/qcbit/blockchain/app/services/node/handlers/debug/checkgrp"
 	v1 "github.com/qcbit/blockchain/app/services/node/handlers/v1"
 	"github.com/qcbit/blockchain/business/web/v1/mid"
+	"github.com/qcbit/blockchain/foundation/blockchain/state"
 	"github.com/qcbit/blockchain/foundation/web"
-	"go.uber.org/zap"
 )
 
 // MuxConfig contains all the mandatory systems required by handlers.
 type MuxConfig struct {
 	Shutdown chan os.Signal
 	Log      *zap.SugaredLogger
+	State    *state.State
 }
 
 // PublicMux constructs a http.Handler with all application routes defined.
@@ -45,6 +48,7 @@ func PublicMux(cfg MuxConfig) http.Handler {
 	// Load the v1 routes.
 	v1.PublicRoutes(app, v1.Config{
 		Log: cfg.Log,
+		State: cfg.State,
 	})
 
 	return app
