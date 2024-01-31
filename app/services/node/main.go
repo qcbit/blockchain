@@ -18,6 +18,7 @@ import (
 	"github.com/qcbit/blockchain/app/services/node/handlers"
 	"github.com/qcbit/blockchain/foundation/blockchain/database"
 	"github.com/qcbit/blockchain/foundation/blockchain/genesis"
+	"github.com/qcbit/blockchain/foundation/blockchain/nameservice"
 	"github.com/qcbit/blockchain/foundation/blockchain/state"
 	"github.com/qcbit/blockchain/foundation/logger"
 )
@@ -105,6 +106,22 @@ func run(log *zap.SugaredLogger) error {
 	log.Infow("startup", "config", out)
 
 	// ----------------------------------------------------------------
+	// NameService Support
+	// ----------------------------------------------------------------
+
+	// The NameService package provides name resolution for the account addresses.
+	// The names come from the file names in the zblock/accounts folder.
+	ns, err := nameservice.New(cfg.NameService.Folder)
+	if err != nil {
+		return fmt.Errorf("unable to create name service: %w", err)
+	}
+
+	// Logging the accounts and their names.
+	for account, name := range ns.Copy() {
+		log.Infow("startup", "status", "nameservice", "name", name, "account", account)
+	}
+
+	// ----------------------------------------------------------------
 	// Blockchain Support
 	// ----------------------------------------------------------------
 
@@ -190,6 +207,7 @@ func run(log *zap.SugaredLogger) error {
 		Shutdown: shutdown,
 		Log:      log,
 		State:    state,
+		NS:       ns,
 	})
 
 	// Construct a server to service the requests against the mux.

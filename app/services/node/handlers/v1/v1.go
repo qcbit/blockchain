@@ -9,6 +9,7 @@ import (
 
 	"github.com/qcbit/blockchain/app/services/node/handlers/v1/private"
 	"github.com/qcbit/blockchain/app/services/node/handlers/v1/public"
+	"github.com/qcbit/blockchain/foundation/blockchain/nameservice"
 	"github.com/qcbit/blockchain/foundation/blockchain/state"
 	"github.com/qcbit/blockchain/foundation/web"
 )
@@ -19,6 +20,7 @@ const version = "v1"
 type Config struct {
 	Log   *zap.SugaredLogger
 	State *state.State
+	NS    *nameservice.NameService
 }
 
 // PublicRoutes binds all the version 1 public routes.
@@ -26,6 +28,7 @@ func PublicRoutes(app *web.App, cfg Config) {
 	pbl := public.Handlers{
 		Log:   cfg.Log,
 		State: cfg.State,
+		NS:    cfg.NS,
 	}
 
 	app.Handle(http.MethodGet, version, "/genesis/list", pbl.Genesis)
