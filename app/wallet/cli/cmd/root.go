@@ -15,7 +15,7 @@ var (
 )
 
 const (
-	keyExtenstion = ".ecdsa"
+	keyExtension = ".ecdsa"
 )
 
 func init() {
@@ -37,8 +37,8 @@ func Execute() {
 }
 
 func getPrivateKeyPath() string {
-	if !strings.HasSuffix(accountName, keyExtenstion) {
-		accountName += keyExtenstion
+	if !strings.HasSuffix(accountName, keyExtension) {
+		accountName += keyExtension
 	}
 
 	return filepath.Join(accountPath, accountName)
