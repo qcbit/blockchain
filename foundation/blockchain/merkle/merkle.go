@@ -238,8 +238,7 @@ func (t *Tree[T]) VerifyData(data T) error {
 	return errors.New("merkle root is not equivalent to the merkle root calculated on the critical path")
 }
 
-// Values returns a slice of unique values stored in the tree. The last value in
-// the tree might be a duplicate when there are an odd number of actual values.
+// Values returns a slice of unique values stored in the tree.
 func (t *Tree[T]) Values() []T {
 	var values []T
 	for _, tx := range t.Leafs {

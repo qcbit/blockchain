@@ -1,6 +1,8 @@
 package state
 
-import "github.com/qcbit/blockchain/foundation/blockchain/database"
+import (
+	"github.com/qcbit/blockchain/foundation/blockchain/database"
+)
 
 // UpsertWalletTransaction adds a transaction to the mempool.
 func (s *State) UpsertWalletTransaction(signedTx database.SignedTx) error {
@@ -19,6 +21,8 @@ func (s *State) UpsertWalletTransaction(signedTx database.SignedTx) error {
 	if err := s.mempool.Upsert(tx); err != nil {
 		return err
 	}
+
+	s.Worker.SignalStartMining()
 
 	return nil
 }
