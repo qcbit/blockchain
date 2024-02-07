@@ -13,7 +13,7 @@ type Genesis struct {
 	ChainID       uint16            `json:"chain_id"`
 	TransPerBlock uint16            `json:"trans_per_block"`
 	Difficulty    uint16            `json:"difficulty"`
-	MinerReward   uint64            `json:"miner_reward"`
+	MiningReward  uint64            `json:"mining_reward"`
 	GasPrice      uint64            `json:"gas_price"`
 	Balances      map[string]uint64 `json:"balances"`
 }
