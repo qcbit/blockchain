@@ -100,6 +100,11 @@ func (s *State) Shutdown() error {
 	return nil
 }
 
+// LatestBlock returns a copy of the current latest block.
+func (s *State) LatestBlock() database.Block {
+	return s.db.LatestBlock()
+}
+
 // Genesis returns a copy of the genesis information.
 func (s *State) Genesis() genesis.Genesis {
 	return s.genesis

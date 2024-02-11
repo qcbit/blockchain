@@ -82,7 +82,24 @@ func (h Handlers) Accounts(ctx context.Context, w http.ResponseWriter, r *http.R
 		accounts = map[database.AccountID]database.Account{accountID: account}
 	}
 
-	return web.Respond(ctx, w, accounts, http.StatusOK)
+	resp := make([]acct, 0, len(accounts))
+	for account, info := range accounts {
+		acct := acct{
+			Account: account,
+			Name:    h.NS.Lookup(account),
+			Balance: info.Balance,
+			Nonce:   info.Nonce,
+		}
+		resp = append(resp, acct)
+	}
+
+	ai := acctInfo{
+		LatestBlock: h.State.LatestBlock().Hash(),
+		Uncommitted: len(h.State.Mempool()),
+		Accounts:    resp,
+	}
+
+	return web.Respond(ctx, w, ai, http.StatusOK)
 }
 
 // Mempool returns the current uncommitted transactions.

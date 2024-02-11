@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/rand"
 	"errors"
+	"fmt"
 	"math"
 	"math/big"
 	"time"
@@ -192,6 +193,75 @@ func (b Block) Hash() string {
 	//   blocks, but can prove a transaction is in a block.
 
 	return signature.Hash(b.Header)
+}
+
+// ValidateBlock takes a block and validates it to be included into the blockchain.
+func (b Block) ValidateBlock(previousBlock Block, stateRoot string, evHandler func(v string, args ...any)) error {
+	evHandler("database: ValidateBlock: validate: blk[%d]: check: chain is not forked", b.Header.Number)
+
+	// The node that sent this block has a chain that is two or more blocks
+	// ahead. This means there has been a fork and this node id on the wrong side.
+	nextNumber := previousBlock.Header.Number + 1
+	if b.Header.Number >= (nextNumber + 2) {
+		return ErrChainForked
+	}
+
+	evHandler("database: ValidateBlock: validate: blk[%d]: check: block difficulty is the same or greater than parent", b.Header.Number)
+
+	if b.Header.Difficulty < previousBlock.Header.Difficulty {
+		return fmt.Errorf("block difficulty is less than previous block, parent[%d]: block[%d]", previousBlock.Header.Difficulty, b.Header.Difficulty)
+	}
+
+	evHandler("database: ValidateBlock: validate: blk[%d]: check: block has been solved", b.Header.Number)
+
+	hash := b.Hash()
+	if !isHashSolved(b.Header.Difficulty, hash) {
+		return fmt.Errorf("Invalid block hash, block[%d]: hash[%s]", b.Header.Number, hash)
+	}
+
+	evHandler("database: ValidateBlock: validate: blk[%d]: check: block number is the next number", b.Header.Number)
+
+	if b.Header.Number != nextNumber {
+		return fmt.Errorf("this block is not the next block in the chain. Got %d, expected %d", b.Header.Number, nextNumber)
+	}
+
+	evHandler("database: ValidateBlock: validate: blk[%d]: check: parent hash matches parent block", b.Header.Number)
+
+	if b.Header.PrevBlockHash != previousBlock.Hash() {
+		return fmt.Errorf("parent block hash does not match our known parent block. Got %s, expected: %s", b.Header.PrevBlockHash, previousBlock.Hash())
+	}
+
+	if previousBlock.Header.TimeStamp > 0 {
+		evHandler("database: ValidateBlock: validate: blk[%d]: check: block's timestamp is greater than previous block", b.Header.Number)
+
+		parentTime := time.Unix(int64(previousBlock.Header.TimeStamp), 0)
+		blockTime := time.Unix(int64(b.Header.TimeStamp), 0)
+		if blockTime.Before(parentTime) {
+			return fmt.Errorf("block's timestamp %s is less than the previous block %s.", blockTime, parentTime)
+		}
+
+		// This is a check that Ethereum does, but we can't because of run time.
+		// evHandler("database: ValidateBlock: validate: blk[%d]: check: block is less than 15 minutes apart from previous block", b.Header.Number)
+
+		// dur := blockTime.Sub(parentTime)
+		// if dur.Seconds() > time.Duration(15*time.Second).Seconds() {
+		// return fmt.Errorf("block is older than 15 minutes, duration %v", dur)
+		// }
+	}
+
+	evHandler("database: ValidateBlock: validate: blk[%d]: check: state root hash does match current database", b.Header.Number)
+
+	if b.Header.StateRoot != stateRoot {
+		return fmt.Errorf("state of the accounts are incorrect. got: %s, expected: %s", b.Header.StateRoot, stateRoot)
+	}
+
+	evHandler("database: ValidateBlock: validate: blk[%d]: check: merkle root hash matches the transactions", b.Header.Number)
+
+	if b.Header.TransRoot != b.MerkleTree.RootHex() {
+		return fmt.Errorf("merkle root does not match transactions. got: %s, expected: %s", b.MerkleTree.RootHex(), b.Header.TransRoot)
+	}
+
+	return nil
 }
 
 // isHashSolved checks the hash to make sure it complies with
