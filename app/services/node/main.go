@@ -20,6 +20,7 @@ import (
 	"github.com/qcbit/blockchain/foundation/blockchain/genesis"
 	"github.com/qcbit/blockchain/foundation/blockchain/nameservice"
 	"github.com/qcbit/blockchain/foundation/blockchain/state"
+	"github.com/qcbit/blockchain/foundation/blockchain/storage/disk"
 	"github.com/qcbit/blockchain/foundation/blockchain/worker"
 	"github.com/qcbit/blockchain/foundation/logger"
 )
@@ -67,6 +68,7 @@ func run(log *zap.SugaredLogger) error {
 		State struct {
 			Beneficiary    string `conf:"default:miner1"`
 			SelectStrategy string `conf:"default:Tip"`
+			DBPath         string `conf:"default:zblock/miner1/"`
 		}
 		NameService struct {
 			Folder string `conf:"default:zblock/accounts/"`
@@ -148,6 +150,12 @@ func run(log *zap.SugaredLogger) error {
 		log.Infow(s, "traceid", "00000000-0000-0000-0000-000000000000")
 	}
 
+	// Construct the use of disk storage.
+	storage, err := disk.New(cfg.State.DBPath)
+	if err != nil {
+		return err
+	}
+
 	// Load the genesis file.
 	genesis, err := genesis.Load()
 	if err != nil {
@@ -158,6 +166,7 @@ func run(log *zap.SugaredLogger) error {
 	// and provides the API for the application support.
 	state, err := state.New(state.Config{
 		BeneficiaryID:  database.PublicKeyToAccountID(privateKey.PublicKey),
+		Storage: 	  storage,
 		Genesis:        genesis,
 		SelectStrategy: cfg.State.SelectStrategy,
 		EvHandler:      ev,
