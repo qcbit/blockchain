@@ -19,6 +19,7 @@ import (
 	"github.com/qcbit/blockchain/foundation/blockchain/database"
 	"github.com/qcbit/blockchain/foundation/blockchain/genesis"
 	"github.com/qcbit/blockchain/foundation/blockchain/nameservice"
+	"github.com/qcbit/blockchain/foundation/blockchain/peer"
 	"github.com/qcbit/blockchain/foundation/blockchain/state"
 	"github.com/qcbit/blockchain/foundation/blockchain/storage/disk"
 	"github.com/qcbit/blockchain/foundation/blockchain/worker"
@@ -66,9 +67,10 @@ func run(log *zap.SugaredLogger) error {
 			PrivateHost     string        `conf:"default:0.0.0.0:9080"`
 		}
 		State struct {
-			Beneficiary    string `conf:"default:miner1"`
-			SelectStrategy string `conf:"default:Tip"`
-			DBPath         string `conf:"default:zblock/miner1/"`
+			Beneficiary    string   `conf:"default:miner1"`
+			SelectStrategy string   `conf:"default:Tip"`
+			DBPath         string   `conf:"default:zblock/miner1/"`
+			OriginPeers    []string `conf:"default:0.0.0.0:9080"`
 		}
 		NameService struct {
 			Folder string `conf:"default:zblock/accounts/"`
@@ -145,6 +147,14 @@ func run(log *zap.SugaredLogger) error {
 		return fmt.Errorf("unable to load private key for node: %w", err)
 	}
 
+	// A peer set is a collection of known nodes in the
+	// network so transactions and blocks can be shared.
+	peerSet := peer.NewPeerSet()
+	for _, host := range cfg.State.OriginPeers {
+		peerSet.Add(peer.New(host))
+	}
+	peerSet.Add(peer.New(cfg.Web.PrivateHost))
+
 	ev := func(v string, args ...any) {
 		s := fmt.Sprintf(v, args...)
 		log.Infow(s, "traceid", "00000000-0000-0000-0000-000000000000")
@@ -166,9 +176,11 @@ func run(log *zap.SugaredLogger) error {
 	// and provides the API for the application support.
 	state, err := state.New(state.Config{
 		BeneficiaryID:  database.PublicKeyToAccountID(privateKey.PublicKey),
-		Storage: 	  storage,
+		Host:           cfg.Web.PrivateHost,
+		Storage:        storage,
 		Genesis:        genesis,
 		SelectStrategy: cfg.State.SelectStrategy,
+		KnownPeers:     peerSet,
 		EvHandler:      ev,
 	})
 	if err != nil {
@@ -250,6 +262,7 @@ func run(log *zap.SugaredLogger) error {
 		Shutdown: shutdown,
 		Log:      log,
 		State:    state,
+		NS:       ns,
 	})
 
 	// Construct a server to service the requests against the mux.

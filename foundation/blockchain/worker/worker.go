@@ -4,16 +4,21 @@ package worker
 import (
 	"sync"
 
+	"github.com/qcbit/blockchain/foundation/blockchain/database"
 	"github.com/qcbit/blockchain/foundation/blockchain/state"
 )
 
 // Worker manages the POW workflows for the blockchain.
+
+// Add this line
+
 type Worker struct {
 	state        *state.State
 	wg           sync.WaitGroup
 	shut         chan struct{}
 	startMining  chan bool
 	cancelMining chan bool
+	txSharing    chan database.BlockTx
 	evHandler    state.EventHandler
 }
 
@@ -25,14 +30,19 @@ func Run(state *state.State, evHandler state.EventHandler) {
 		shut:         make(chan struct{}),
 		startMining:  make(chan bool, 1),
 		cancelMining: make(chan bool, 1),
+		txSharing:    make(chan database.BlockTx, maxTxShareRequests),
 		evHandler:    evHandler,
 	}
 
 	// Register the worker with the state.
 	state.Worker = &w
 
+	// Update this node before starting any support goroutines.
+	w.Sync()
+
 	// Load the set of operations to run.
 	operations := []func(){
+		w.shareTxOperations,
 		w.powOperations,
 	}
 
@@ -106,6 +116,17 @@ func (w *Worker) SignalCancelMining() {
 	default:
 	}
 	w.evHandler("worker: SignalCancelMining: CANCEL: signaled")
+}
+
+// SignalShareTx signals a share transaction operation. If maxTxShareRequests
+// signals exists in the channel, we won't send these.
+func (w *Worker) SignalShareTx(blockTx database.BlockTx) {
+	select {
+	case w.txSharing <- blockTx:
+		w.evHandler("worker: SignalShareTx: share Tx signaled")
+	default:
+		w.evHandler("worker: SignalShareTx: queue full, transaction dropped and transactions won't be shared.")
+	}
 }
 
 // ------------------------------------------------------------------------------

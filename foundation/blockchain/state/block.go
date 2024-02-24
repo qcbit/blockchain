@@ -56,6 +56,24 @@ func (s *State) MineNewBlock(ctx context.Context) (database.Block, error) {
 	return block, nil
 }
 
+// ProcessProposedBlock takes a block received from a peer, validates,
+// if valid, adds the block to the local blockchain.
+func (s *State) ProcessProposedBlock(block database.Block) error {
+	s.evHandler("state: ProcessProposedBlock: started: prevBlk[%s]: newBlk[%s]: numTrans[%d]", 
+		block.Header.PrevBlockHash, block.Hash(), len(block.MerkleTree.Values()))
+	defer s.evHandler("state: ProcessProposedBlock: completed: newBlk[%s]", block.Hash())
+
+	// Validate the block and then update the blockchain database.
+	if err := s.validateUpdateDatabase(block); err != nil {
+		return err
+	}
+
+	// Stop runMiningOperation
+	s.Worker.SignalCancelMining()
+
+	return nil
+}
+
 //---------------------------------------------------
 
 // validateUpdateDatabase takes the block and validates the block against the

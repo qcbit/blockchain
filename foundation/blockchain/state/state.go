@@ -8,6 +8,7 @@ import (
 	"github.com/qcbit/blockchain/foundation/blockchain/database"
 	"github.com/qcbit/blockchain/foundation/blockchain/genesis"
 	"github.com/qcbit/blockchain/foundation/blockchain/mempool"
+	"github.com/qcbit/blockchain/foundation/blockchain/peer"
 )
 
 // EventHandler defines a function that is called when events
@@ -18,10 +19,10 @@ type EventHandler func(v string, args ...any)
 // package providing support for mining,peer updates,and transaction sharing.
 type Worker interface {
 	Shutdown()
-	// Sync()
+	Sync()
 	SignalStartMining()
 	SignalCancelMining()
-	// SignalShareTx(blockTx database.BlockTx)
+	SignalShareTx(blockTx database.BlockTx)
 }
 
 //------------------------------------------------------------
@@ -30,8 +31,10 @@ type Worker interface {
 // start the blockchain node.
 type Config struct {
 	BeneficiaryID  database.AccountID
+	Host           string
 	Storage        database.Storage
 	Genesis        genesis.Genesis
+	KnownPeers     *peer.PeerSet
 	SelectStrategy string
 	EvHandler      EventHandler
 }
@@ -41,12 +44,14 @@ type State struct {
 	mu sync.RWMutex
 
 	beneficiaryID database.AccountID
+	host          string
 	evHandler     EventHandler
 
-	storage database.Storage
-	genesis genesis.Genesis
-	mempool *mempool.Mempool
-	db      *database.Database
+	knownPeers *peer.PeerSet
+	storage    database.Storage
+	genesis    genesis.Genesis
+	mempool    *mempool.Mempool
+	db         *database.Database
 
 	Worker Worker
 }
@@ -80,10 +85,12 @@ func New(cfg Config) (*State, error) {
 		beneficiaryID: cfg.BeneficiaryID,
 		storage:       cfg.Storage,
 		evHandler:     ev,
+		host:          cfg.Host,
 
-		genesis: cfg.Genesis,
-		mempool: mempool,
-		db:      db,
+		knownPeers: cfg.KnownPeers,
+		genesis:    cfg.Genesis,
+		mempool:    mempool,
+		db:         db,
 	}, nil
 }
 
@@ -131,4 +138,30 @@ func (s *State) UpsertMempool(tx database.BlockTx) error {
 // Accounts returns a copy of the database accounts.
 func (s *State) Accounts() map[database.AccountID]database.Account {
 	return s.db.Copy()
+}
+
+// Host returns a copy of host information.
+func (s *State) Host() string {
+	return s.host
+}
+
+// KnownExternalPeers retrieves a copy of the known peer list without including this node.
+func (s *State) KnownExternalPeers() []peer.Peer {
+	return s.knownPeers.Copy(s.host)
+}
+
+// AddKnownPeer adds a new peer to the known peer list.
+func (s *State) AddKnownPeer(peer peer.Peer) bool {
+	return s.knownPeers.Add(peer)
+}
+
+// RemoveKnownPeer removes a peer from the known peer list.
+func (s *State) RemoveKnownPeer(peer peer.Peer) {
+	s.knownPeers.Remove(peer)
+}
+
+// KnownPeers retrieves a copy of the full known peer list which
+// includes this node. Used by the PoA selection algorithm.
+func (s *State) KnownPeers() []peer.Peer {
+	return s.knownPeers.Copy("")
 }

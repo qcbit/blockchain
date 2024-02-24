@@ -90,7 +90,7 @@ func (w *Worker) runPowOperation() {
 		}()
 
 		t := time.Now()
-		_, err := w.state.MineNewBlock(ctx)
+		block, err := w.state.MineNewBlock(ctx)
 		duration := time.Since(t)
 
 		w.evHandler("worker: runPowOperation: MINING: mining duration[%v]", duration)
@@ -106,7 +106,11 @@ func (w *Worker) runPowOperation() {
 			}
 			return
 		}
-		// BLOCK MINED
+		// BLOCK MINED. Propose the new block to the network.
+		// Log the error, but that's it.
+		if err := w.state.NetSendBlockToPeers(block); err != nil {
+			w.evHandler("worker: runMiningOperation: MINING: proposeBlockToPeers: WARNING %s", err)
+		}
 	}()
 	// Wait for both goroutines to complete.
 	wg.Wait()
