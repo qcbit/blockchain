@@ -3,18 +3,21 @@ package worker
 
 import (
 	"sync"
+	"time"
 
 	"github.com/qcbit/blockchain/foundation/blockchain/database"
 	"github.com/qcbit/blockchain/foundation/blockchain/state"
 )
 
+// peerUpdateInterval represents the interval of finding new per
+// nodes and updating the blockchain on disk with missing blocks.
+const peerUpdateInterval = time.Minute
+
 // Worker manages the POW workflows for the blockchain.
-
-// Add this line
-
 type Worker struct {
 	state        *state.State
 	wg           sync.WaitGroup
+	ticker       time.Ticker
 	shut         chan struct{}
 	startMining  chan bool
 	cancelMining chan bool
@@ -27,6 +30,7 @@ type Worker struct {
 func Run(state *state.State, evHandler state.EventHandler) {
 	w := Worker{
 		state:        state,
+		ticker:       *time.NewTicker(peerUpdateInterval),
 		shut:         make(chan struct{}),
 		startMining:  make(chan bool, 1),
 		cancelMining: make(chan bool, 1),
@@ -42,6 +46,7 @@ func Run(state *state.State, evHandler state.EventHandler) {
 
 	// Load the set of operations to run.
 	operations := []func(){
+		w.peerOperations,
 		w.shareTxOperations,
 		w.powOperations,
 	}
