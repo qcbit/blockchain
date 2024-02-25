@@ -25,7 +25,11 @@ func (s *State) MineNewBlock(ctx context.Context) (database.Block, error) {
 	// Pick the best transactions from the mempool.
 	trans := s.mempool.PickBest(s.genesis.TransPerBlock)
 
+	// If PoA, drop the difficulty to 1 to speed up the mining process.
 	difficulty := s.genesis.Difficulty
+	if s.Consensus() == ConsensusPOA {
+		difficulty = 1
+	}
 
 	// Attempt to create a new block by solving the POW puzzle. This can be canceled.
 	block, err := database.POW(ctx, database.POWArgs{
@@ -59,7 +63,7 @@ func (s *State) MineNewBlock(ctx context.Context) (database.Block, error) {
 // ProcessProposedBlock takes a block received from a peer, validates,
 // if valid, adds the block to the local blockchain.
 func (s *State) ProcessProposedBlock(block database.Block) error {
-	s.evHandler("state: ProcessProposedBlock: started: prevBlk[%s]: newBlk[%s]: numTrans[%d]", 
+	s.evHandler("state: ProcessProposedBlock: started: prevBlk[%s]: newBlk[%s]: numTrans[%d]",
 		block.Header.PrevBlockHash, block.Hash(), len(block.MerkleTree.Values()))
 	defer s.evHandler("state: ProcessProposedBlock: completed: newBlk[%s]", block.Hash())
 

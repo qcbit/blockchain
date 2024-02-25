@@ -11,6 +11,12 @@ import (
 	"github.com/qcbit/blockchain/foundation/blockchain/peer"
 )
 
+// The set of different consensus algorithms that can be used.
+const (
+	ConsensusPOW = "POW"
+	ConsensusPOA = "POA"
+)
+
 // EventHandler defines a function that is called when events
 // occur in the processing of persisting blocks.
 type EventHandler func(v string, args ...any)
@@ -37,6 +43,7 @@ type Config struct {
 	KnownPeers     *peer.PeerSet
 	SelectStrategy string
 	EvHandler      EventHandler
+	Consensus      string
 }
 
 // State manages the blockchain database.
@@ -46,6 +53,7 @@ type State struct {
 	beneficiaryID database.AccountID
 	host          string
 	evHandler     EventHandler
+	consensus     string
 
 	knownPeers *peer.PeerSet
 	storage    database.Storage
@@ -86,6 +94,7 @@ func New(cfg Config) (*State, error) {
 		storage:       cfg.Storage,
 		evHandler:     ev,
 		host:          cfg.Host,
+		consensus:     cfg.Consensus,
 
 		knownPeers: cfg.KnownPeers,
 		genesis:    cfg.Genesis,
@@ -108,6 +117,11 @@ func (s *State) Shutdown() error {
 	s.Worker.Shutdown()
 
 	return nil
+}
+
+// Consensus returns a copy of the used consensus alforithm.
+func (s *State) Consensus() string {
+	return s.consensus
 }
 
 // LatestBlock returns a copy of the current latest block.

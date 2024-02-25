@@ -11,7 +11,7 @@ import (
 
 // peerUpdateInterval represents the interval of finding new per
 // nodes and updating the blockchain on disk with missing blocks.
-const peerUpdateInterval = time.Minute
+const peerUpdateInterval = time.Second * 10
 
 // Worker manages the POW workflows for the blockchain.
 type Worker struct {
@@ -27,9 +27,9 @@ type Worker struct {
 
 // Run creates a worker, registers the worker with the state,
 // and starts all the background processes.
-func Run(state *state.State, evHandler state.EventHandler) {
+func Run(st *state.State, evHandler state.EventHandler) {
 	w := Worker{
-		state:        state,
+		state:        st,
 		ticker:       *time.NewTicker(peerUpdateInterval),
 		shut:         make(chan struct{}),
 		startMining:  make(chan bool, 1),
@@ -39,16 +39,22 @@ func Run(state *state.State, evHandler state.EventHandler) {
 	}
 
 	// Register the worker with the state.
-	state.Worker = &w
+	st.Worker = &w
 
 	// Update this node before starting any support goroutines.
 	w.Sync()
+
+	// Select the consensus operation to run.
+	consensusOperation := w.powOperations
+	if st.Consensus() == state.ConsensusPOA {
+		consensusOperation = w.poaOperations
+	}
 
 	// Load the set of operations to run.
 	operations := []func(){
 		w.peerOperations,
 		w.shareTxOperations,
-		w.powOperations,
+		consensusOperation,
 	}
 
 	// Set the wait group to match the number of goroutines needed for the set of operations.
